@@ -67,21 +67,24 @@ const questions = [
   }
 ];
 
-const createBouncingImage = (id) => ({
-  id,
-  position: { 
-    x: Math.random() * (window.innerWidth - 200), 
-    y: Math.random() * (window.innerHeight - 200) 
-  },
-  speed: { 
-    x: Math.random() * 6 + 4, // Velocidad entre 4 y 10
-    y: Math.random() * 6 + 4
-  },
-  direction: { 
-    x: Math.random() > 0.5 ? 1 : -1, 
-    y: Math.random() > 0.5 ? 1 : -1 
-  }
-});
+const createBouncingImage = (id) => {
+  const baseSpeed = Math.max(2, 10 - (id * 2));
+  return {
+    id,
+    position: { 
+      x: Math.random() * (window.innerWidth - 200), 
+      y: Math.random() * (window.innerHeight - 200) 
+    },
+    speed: { 
+      x: Math.random() * 4 + baseSpeed,
+      y: Math.random() * 4 + baseSpeed
+    },
+    direction: { 
+      x: Math.random() > 0.5 ? 1 : -1, 
+      y: Math.random() > 0.5 ? 1 : -1 
+    }
+  };
+};
 
 const ValentineApp = () => {
   const [gameState, setGameState] = useState('start');
@@ -325,7 +328,7 @@ const ValentineApp = () => {
             >
               <img
                 src="/images/titiBG.png"
-                alt="Bouncing"
+                alt={`Bouncing ${img.id}`}
                 className="w-full h-full object-contain"
                 draggable="false"
               />
