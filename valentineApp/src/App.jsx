@@ -1,5 +1,28 @@
 import { Heart } from 'lucide-react';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+
+const raveStyles = `
+@keyframes backgroundRave {
+  0% { background-color: rgba(128, 0, 128, 0.8); }
+  20% { background-color: rgba(0, 0, 255, 0.8); }
+  40% { background-color: rgba(0, 77, 0, 0.8); }
+  60% { background-color: rgba(255, 105, 180, 0.8); }
+  80% { background-color: rgba(255, 0, 0, 0.8); }
+  100% { background-color: rgba(255, 255, 255, 0.8); }
+}
+
+.text-stroke {
+  -webkit-text-stroke: 2px black;
+  text-stroke: 2px black;
+  text-shadow: 2px 2px 0 #000,
+              -2px -2px 0 #000,
+              2px -2px 0 #000,
+              -2px 2px 0 #000,
+              0 2px 0 #000,
+              2px 0 0 #000,
+              0 -2px 0 #000,
+              -2px 0 0 #000;
+}`;
 
 const questions = [
   {
@@ -44,14 +67,90 @@ const questions = [
   }
 ];
 
+const createBouncingImage = (id) => ({
+  id,
+  position: { 
+    x: Math.random() * (window.innerWidth - 200), 
+    y: Math.random() * (window.innerHeight - 200) 
+  },
+  speed: { 
+    x: Math.random() * 6 + 4, // Velocidad entre 4 y 10
+    y: Math.random() * 6 + 4
+  },
+  direction: { 
+    x: Math.random() > 0.5 ? 1 : -1, 
+    y: Math.random() > 0.5 ? 1 : -1 
+  }
+});
+
 const ValentineApp = () => {
   const [gameState, setGameState] = useState('start');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [noButtonPosition, setNoButtonPosition] = useState({ top: '50%', left: '50%' });
+  const [bouncingImages, setBouncingImages] = useState([createBouncingImage(0)]);
+  
   const audioRef = useRef(null);
   const startAudioRef = useRef(null);
   const correctAudioRefs = useRef(questions.map(() => React.createRef()));
-  
+  const animationRef = useRef();
+
+  const animate = () => {
+    setBouncingImages(currentImages => {
+      return currentImages.map(img => {
+        let newX = img.position.x + img.speed.x * img.direction.x;
+        let newY = img.position.y + img.speed.y * img.direction.y;
+        let newDirectionX = img.direction.x;
+        let newDirectionY = img.direction.y;
+
+        if (newX < 0 || newX > window.innerWidth - 200) {
+          newDirectionX *= -1;
+          newX = newX < 0 ? 0 : window.innerWidth - 200;
+        }
+        if (newY < 0 || newY > window.innerHeight - 200) {
+          newDirectionY *= -1;
+          newY = newY < 0 ? 0 : window.innerHeight - 200;
+        }
+
+        return {
+          ...img,
+          position: { x: newX, y: newY },
+          direction: { x: newDirectionX, y: newDirectionY }
+        };
+      });
+    });
+
+    animationRef.current = requestAnimationFrame(animate);
+  };
+
+  useEffect(() => {
+    if (gameState === 'accepted') {
+      const maxImages = 5;
+      let currentCount = 1;
+
+      const addImageInterval = setInterval(() => {
+        if (currentCount < maxImages) {
+          setBouncingImages(current => [...current, createBouncingImage(currentCount)]);
+          currentCount++;
+        } else {
+          clearInterval(addImageInterval);
+        }
+      }, 1000);
+
+      return () => clearInterval(addImageInterval);
+    }
+  }, [gameState]);
+
+  useEffect(() => {
+    if (gameState === 'accepted') {
+      animationRef.current = requestAnimationFrame(animate);
+    }
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [gameState]);
+
   const handleStart = () => {
     setGameState('playing');
     if (startAudioRef.current) {
@@ -62,7 +161,6 @@ const ValentineApp = () => {
 
   const handleAnswer = (selectedIndex) => {
     if (selectedIndex === questions[currentQuestion].correctAnswer) {
-      // Reproduce el sonido específico para esta pregunta
       const audioElement = correctAudioRefs.current[currentQuestion].current;
       if (audioElement) {
         audioElement.currentTime = 0;
@@ -102,6 +200,8 @@ const ValentineApp = () => {
 
   return (
     <div className="min-h-screen bg-pink-100 p-4 flex flex-col items-center justify-center">
+      <style>{raveStyles}</style>
+      
       {/* Audios ocultos */}
       <audio
         ref={startAudioRef}
@@ -125,7 +225,7 @@ const ValentineApp = () => {
       {/* Pantalla de inicio */}
       {gameState === 'start' && (
         <div className="text-center">
-          <Heart className="w-20 h-20 text-red-500 mx-auto animate-bounce" />
+          <Heart className="w-20 h-20 text-red-500 mx-auto" />
           <h1 className="text-3xl font-bold text-red-600 mt-4 mb-8">
             ¡Hola Bbcina! 💖
           </h1>
@@ -174,7 +274,7 @@ const ValentineApp = () => {
       {/* Propuesta final */}
       {gameState === 'proposal' && (
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-red-600 mb-8 animate-bounce">
+          <h1 className="text-4xl font-bold text-red-600 mb-8">
             ¿QUIERES SER MI VALENTINE'S? 💝
           </h1>
           <div className="space-x-4">
@@ -200,14 +300,46 @@ const ValentineApp = () => {
         </div>
       )}
 
-      {/* Mensaje de aceptación */}
+      {/* Mensaje de aceptación con efectos rave */}
       {gameState === 'accepted' && (
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-red-600 animate-bounce">
-            ¡TE AMO BBCIN RIN RIN PIN TIN!!! ❤️
-          </h1>
-          <div className="mt-8">
-            <Heart className="w-32 h-32 text-red-500 mx-auto animate-pulse" />
+        <div 
+          className="fixed inset-0 flex flex-col items-center justify-center"
+          style={{
+            animation: 'backgroundRave 0.5s infinite',
+            background: 'rgba(128, 0, 128, 0.8)',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Imágenes rebotando */}
+          {bouncingImages.map((img) => (
+            <div
+              key={img.id}
+              style={{
+                width: '200px',
+                height: '200px',
+                position: 'fixed',
+                left: img.position.x,
+                top: img.position.y,
+                zIndex: 10
+              }}
+            >
+              <img
+                src="/images/titiBG.png"
+                alt="Bouncing"
+                className="w-full h-full object-contain"
+                draggable="false"
+              />
+            </div>
+          ))}
+
+          {/* Contenido estático */}
+          <div className="text-center relative z-20">
+            <h1 className="text-6xl font-bold text-white text-stroke">
+              ¡TE AMO BBCIN RIN RIN PIN TIN!!! ❤️
+            </h1>
+            <div className="mt-8">
+              <Heart className="w-40 h-40 text-white mx-auto" />
+            </div>
           </div>
         </div>
       )}
